@@ -378,24 +378,16 @@ ipcMain.handle("paseo:browser:copy-element", (_event, payload: unknown): boolean
     return false;
   }
   const { text, imageDataUrl } = payload as { text?: unknown; imageDataUrl?: unknown };
-  let wroteSomething = false;
-  // Writing from the main process avoids the renderer's navigator.clipboard
-  // NotAllowedError, which fires when focus is inside the guest <webview>.
-  if (typeof text === "string" && text.length > 0) {
-    clipboard.writeText(text);
-    wroteSomething = true;
-  }
+  const copyText = typeof text === "string" && text.length > 0 ? text : null;
+
+  // Resolve the image first so we can write the clipboard exactly once and
+  // avoid flashing an intermediate text-only state.
+  let image: Electron.NativeImage | null = null;
   if (typeof imageDataUrl === "string" && imageDataUrl.startsWith("data:image")) {
     try {
-      const image = nativeImage.createFromDataURL(imageDataUrl);
-      if (!image.isEmpty()) {
-        // Write text + image together so both survive on the clipboard.
-        if (wroteSomething) {
-          clipboard.write({ text: typeof text === "string" ? text : "", image });
-        } else {
-          clipboard.writeImage(image);
-        }
-        wroteSomething = true;
+      const candidate = nativeImage.createFromDataURL(imageDataUrl);
+      if (!candidate.isEmpty()) {
+        image = candidate;
       }
     } catch (error) {
       log.warn("[browser-capture] copy-element.image-failed", {
@@ -403,7 +395,22 @@ ipcMain.handle("paseo:browser:copy-element", (_event, payload: unknown): boolean
       });
     }
   }
-  return wroteSomething;
+
+  // Writing from the main process avoids the renderer's navigator.clipboard
+  // NotAllowedError, which fires when focus is inside the guest <webview>.
+  if (copyText && image) {
+    clipboard.write({ text: copyText, image });
+    return true;
+  }
+  if (image) {
+    clipboard.writeImage(image);
+    return true;
+  }
+  if (copyText) {
+    clipboard.writeText(copyText);
+    return true;
+  }
+  return false;
 });
 
 protocol.registerSchemesAsPrivileged([
