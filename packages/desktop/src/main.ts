@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import {
   app,
   BrowserWindow,
+  clipboard,
   Menu,
   ipcMain,
   nativeImage,
@@ -301,6 +302,39 @@ ipcMain.handle("paseo:get-pending-open-project", (event) => {
   return result;
 });
 
+function normalizeBrowserCaptureRect(
+  rect: unknown,
+): { x: number; y: number; width: number; height: number } | null {
+  if (!rect || typeof rect !== "object") {
+    return null;
+  }
+  const candidate = rect as Record<string, unknown>;
+  const x = candidate.x;
+  const y = candidate.y;
+  const width = candidate.width;
+  const height = candidate.height;
+  if (
+    typeof x !== "number" ||
+    typeof y !== "number" ||
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    return null;
+  }
+  return {
+    x: Math.max(0, Math.round(x)),
+    y: Math.max(0, Math.round(y)),
+    width: Math.round(width),
+    height: Math.round(height),
+  };
+}
+
 ipcMain.handle("paseo:browser:register-workspace-browser", (_event, rawInput: unknown) => {
   const input = readBrowserWorkspaceInput(rawInput);
   if (input) {
@@ -369,6 +403,71 @@ ipcMain.handle("paseo:browser:clear-partition", async (_event, browserId: unknow
   }
   const partition = `persist:paseo-browser-${browserId}`;
   await session.fromPartition(partition).clearStorageData();
+});
+
+ipcMain.handle(
+  "paseo:browser:capture-element",
+  async (_event, browserId: unknown, rect: unknown) => {
+    if (typeof browserId !== "string" || browserId.trim().length === 0) {
+      return null;
+    }
+    const contents = getPaseoBrowserWebContents(browserId);
+    if (!contents || contents.isDestroyed()) {
+      return null;
+    }
+    const captureRect = normalizeBrowserCaptureRect(rect);
+    if (!captureRect) {
+      return null;
+    }
+    try {
+      // capturePage expects an integer rect in CSS pixels relative to the
+      // guest viewport, which matches getBoundingClientRect() on the page.
+      const image = await contents.capturePage(captureRect);
+      if (image.isEmpty()) {
+        return null;
+      }
+      return image.toDataURL();
+    } catch (error) {
+      log.warn("[browser-capture] capture-element.failed", {
+        browserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  },
+);
+
+ipcMain.handle("paseo:browser:copy-element", (_event, payload: unknown): boolean => {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  const { text, imageDataUrl } = payload as { text?: unknown; imageDataUrl?: unknown };
+  let wroteSomething = false;
+  // Writing from the main process avoids the renderer's navigator.clipboard
+  // NotAllowedError, which fires when focus is inside the guest <webview>.
+  if (typeof text === "string" && text.length > 0) {
+    clipboard.writeText(text);
+    wroteSomething = true;
+  }
+  if (typeof imageDataUrl === "string" && imageDataUrl.startsWith("data:image")) {
+    try {
+      const image = nativeImage.createFromDataURL(imageDataUrl);
+      if (!image.isEmpty()) {
+        // Write text + image together so both survive on the clipboard.
+        if (wroteSomething) {
+          clipboard.write({ text: typeof text === "string" ? text : "", image });
+        } else {
+          clipboard.writeImage(image);
+        }
+        wroteSomething = true;
+      }
+    } catch (error) {
+      log.warn("[browser-capture] copy-element.image-failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  return wroteSomething;
 });
 
 protocol.registerSchemesAsPrivileged([
