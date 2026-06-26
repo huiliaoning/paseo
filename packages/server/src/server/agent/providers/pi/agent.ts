@@ -8,6 +8,7 @@ import { z } from "zod";
 import {
   type AgentCapabilityFlags,
   type AgentClient,
+  type AgentFeature,
   type AgentLaunchContext,
   type AgentMetadata,
   type AgentMode,
@@ -1970,7 +1971,9 @@ export class PiRpcAgentClient implements AgentClient {
   }
 
   async fetchCatalog(options: FetchCatalogOptions): Promise<ProviderCatalog> {
-    const runtimeSession = await this.runtime.startSession({ cwd: options.cwd });
+    const runtimeSession = await this.runtime.startSession({
+      cwd: options.scope === "global" ? homedir() : options.cwd,
+    });
     try {
       const models = transformPiModels(
         (await runtimeSession.getAvailableModels(PI_CATALOG_REQUEST_TIMEOUT_MS)).map(mapPiModel),
@@ -1979,6 +1982,10 @@ export class PiRpcAgentClient implements AgentClient {
     } finally {
       await runtimeSession.close();
     }
+  }
+
+  async listFeatures(_config: AgentSessionConfig): Promise<AgentFeature[]> {
+    return [];
   }
 
   async listImportableSessions(

@@ -5,6 +5,8 @@ import { ar } from "./resources/ar";
 import { en } from "./resources/en";
 import { es } from "./resources/es";
 import { fr } from "./resources/fr";
+import { ja } from "./resources/ja";
+import { ptBR } from "./resources/pt-BR";
 import { ru } from "./resources/ru";
 import { zhCN } from "./resources/zh-CN";
 
@@ -101,28 +103,35 @@ function findUntranslatedConnectionErrors(): string[] {
 }
 
 describe("translation resources", () => {
-  it("keeps UN official language keys in sync with English", () => {
+  it("keeps all supported language keys in sync with English", () => {
     const englishKeys = flattenKeys(en).sort();
     expect(flattenKeys(ar).sort()).toEqual(englishKeys);
     expect(flattenKeys(es).sort()).toEqual(englishKeys);
     expect(flattenKeys(fr).sort()).toEqual(englishKeys);
+    expect(flattenKeys(ja).sort()).toEqual(englishKeys);
+    expect(flattenKeys(ptBR).sort()).toEqual(englishKeys);
     expect(flattenKeys(ru).sort()).toEqual(englishKeys);
     expect(flattenKeys(zhCN).sort()).toEqual(englishKeys);
   });
 
-  it("keeps non-English UN official languages translated beyond fallback labels", () => {
+  it("keeps non-English supported languages translated beyond fallback labels", () => {
     const totalStrings = Object.keys(flattenStrings(en)).length;
     const maxFallbackStrings = Math.floor(totalStrings * 0.25);
     expect(countMatchingEnglishStrings(ar)).toBeLessThan(maxFallbackStrings);
     expect(countMatchingEnglishStrings(es)).toBeLessThan(maxFallbackStrings);
     expect(countMatchingEnglishStrings(fr)).toBeLessThan(maxFallbackStrings);
+    expect(countMatchingEnglishStrings(ja)).toBeLessThan(maxFallbackStrings);
+    expect(countMatchingEnglishStrings(ptBR)).toBeLessThan(maxFallbackStrings);
     expect(countMatchingEnglishStrings(ru)).toBeLessThan(maxFallbackStrings);
+    expect(countMatchingEnglishStrings(zhCN)).toBeLessThan(maxFallbackStrings);
   });
 
   it("preserves interpolation placeholders in every language", () => {
     expect(findInterpolationMismatches(ar)).toEqual([]);
     expect(findInterpolationMismatches(es)).toEqual([]);
     expect(findInterpolationMismatches(fr)).toEqual([]);
+    expect(findInterpolationMismatches(ja)).toEqual([]);
+    expect(findInterpolationMismatches(ptBR)).toEqual([]);
     expect(findInterpolationMismatches(ru)).toEqual([]);
     expect(findInterpolationMismatches(zhCN)).toEqual([]);
   });
@@ -137,11 +146,15 @@ describe("translation resources", () => {
     expect(ar.modelSelector.modelCountPlural).toBe("{{count}} نماذج");
     expect(es.modelSelector.modelCountPlural).toBe("{{count}} modelos");
     expect(fr.modelSelector.modelCountPlural).toBe("{{count}} modèles");
+    expect(ja.modelSelector.modelCountPlural).toBe("{{count}}つのモデル");
+    expect(ptBR.modelSelector.modelCountPlural).toBe("{{count}} modelos");
     expect(ru.modelSelector.modelCountPlural).toBe("{{count}} моделей");
     expect(zhCN.modelSelector.modelCountPlural).toBe("{{count}} 个模型");
     expect(ar.settings.providers.models.many).toBe("{{count}} نماذج");
     expect(es.settings.providers.models.many).toBe("{{count}} modelos");
     expect(fr.settings.providers.models.many).toBe("{{count}} modèles");
+    expect(ja.settings.providers.models.many).toBe("{{count}}つのモデル");
+    expect(ptBR.settings.providers.models.many).toBe("{{count}} modelos");
     expect(ru.settings.providers.models.many).toBe("{{count}} моделей");
     expect(zhCN.settings.providers.models.many).toBe("{{count}} 个 Model");
   });

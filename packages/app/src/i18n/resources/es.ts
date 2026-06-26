@@ -1494,6 +1494,8 @@ export const es: TranslationResources = {
           en: "English",
           es: "Español",
           fr: "Français",
+          ja: "日本語",
+          ptBR: "Português brasileiro",
           ru: "Русский",
           zhCN: "中文",
         },
@@ -1505,6 +1507,22 @@ export const es: TranslationResources = {
       playTest: "Prueba de juego",
       playing: "Jugando...",
       playbackFailed: "Error de reproducción:{{message}}",
+      app: {
+        title: "App diagnostic",
+        rowTitle: "App diagnostic",
+        rowHint: "Collect connection, daemon, provider, desktop, and log details",
+        run: "Run",
+        running: "Running diagnostic...",
+        copyLabel: "diagnostic",
+        copyAccessibility: "Copy diagnostic",
+        copyFailed: "Failed to copy diagnostic",
+        refreshAccessibility: "Refresh diagnostic",
+        refreshingAccessibility: "Refreshing diagnostic",
+        progress: {
+          client: "Client",
+          desktop: "Desktop",
+        },
+      },
     },
     about: {
       title: "Acerca de",
@@ -1786,6 +1804,30 @@ export const es: TranslationResources = {
             "No se pudo enviar la solicitud de reinicio.Paseose vuelve a conectar automáticamente; inténtelo nuevamente una vez que el host se muestre en línea.",
           dialogFailedMessage:
             "No se puede abrir el cuadro de diálogo de confirmación de reinicio.",
+        },
+        update: {
+          title: "Update daemon",
+          hint: "Update the daemon to the latest version and restart it",
+          confirm: "Update",
+          confirmTitle: "Update {{name}}",
+          confirmMessage:
+            "This will update the daemon to the latest version and restart it. Running agents will be briefly interrupted.",
+          updating: "Updating...",
+          phaseStarting: "Preparing update...",
+          phaseDownloading: "Downloading packages...",
+          phaseInstalling: "Installing...",
+          phaseComplete: "Update complete, restarting...",
+          unableToReconnectTitle: "Unable to reconnect",
+          unableToReconnectMessage:
+            "{{name}} did not come back online after updating. Please verify the daemon restarted.",
+          unavailableTitle: "Host unavailable",
+          unavailableMessage:
+            "This host is not connected. Wait for it to come online before updating.",
+          offlineTitle: "Host offline",
+          offlineMessage: "This host is offline. Wait until it is back online before updating.",
+          requestFailedTitle: "Update failed",
+          requestFailedMessage: "Failed to update the daemon: {{error}}",
+          dialogFailedMessage: "Unable to open the update confirmation dialog.",
         },
         dangerZone: "Zona de peligro",
         remove: {
