@@ -11,8 +11,10 @@ const SIDEBAR_VIEW_STORE_VERSION = 1;
 interface SidebarViewStoreState {
   groupMode: SidebarGroupMode;
   hostFilter: string | null;
+  searchQuery: string;
   setGroupMode: (mode: SidebarGroupMode) => void;
   setHostFilter: (serverId: string | null) => void;
+  setSearchQuery: (query: string) => void;
   reconcileHostFilter: (serverIds: readonly string[]) => void;
 }
 
@@ -77,8 +79,10 @@ export const useSidebarViewStore = create<SidebarViewStoreState>()(
     (set) => ({
       groupMode: "project",
       hostFilter: null,
+      searchQuery: "",
       setGroupMode: (mode) => set({ groupMode: mode }),
       setHostFilter: (serverId) => set({ hostFilter: serverId }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
       reconcileHostFilter: (serverIds) =>
         set((state) => {
           if (!state.hostFilter || serverIds.includes(state.hostFilter)) {
