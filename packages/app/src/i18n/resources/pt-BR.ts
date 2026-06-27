@@ -798,9 +798,20 @@ export const ptBR: TranslationResources = {
       home: "Início",
       settings: "Configurações",
       closeSidebar: "Fechar barra lateral",
+      commandCenter: "Central de comandos",
+      openCommandCenter: "Abrir central de comandos",
+      displayPreferences: "Preferências de exibição",
+    },
+    search: {
+      placeholder: "Filtrar projetos...",
+      clear: "Limpar busca",
+      open: "Buscar projetos",
+      close: "Fechar busca",
+      closeAccessibility: "Fechar busca de projetos",
     },
     sections: {
       sessions: "Histórico",
+      workspaces: "Workspaces",
     },
     worktreeSetup: {
       title: "Configurar scripts de worktree",

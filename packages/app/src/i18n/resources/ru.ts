@@ -799,9 +799,20 @@ export const ru: TranslationResources = {
       home: "Дом",
       settings: "Настройки",
       closeSidebar: "Закрыть боковую панель",
+      commandCenter: "Командный центр",
+      openCommandCenter: "Открыть командный центр",
+      displayPreferences: "Параметры отображения",
+    },
+    search: {
+      placeholder: "Фильтровать проекты...",
+      clear: "Очистить поиск",
+      open: "Искать проекты",
+      close: "Закрыть поиск",
+      closeAccessibility: "Закрыть поиск проектов",
     },
     sections: {
       sessions: "История",
+      workspaces: "Рабочие пространства",
     },
     worktreeSetup: {
       title: "Настройка сценариев рабочего дерева",

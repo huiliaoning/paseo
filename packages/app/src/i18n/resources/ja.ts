@@ -792,9 +792,20 @@ export const ja: TranslationResources = {
       home: "ホーム",
       settings: "設定",
       closeSidebar: "サイドバーを閉じる",
+      commandCenter: "コマンドセンター",
+      openCommandCenter: "コマンドセンターを開く",
+      displayPreferences: "表示設定",
+    },
+    search: {
+      placeholder: "プロジェクトを絞り込む...",
+      clear: "検索をクリア",
+      open: "プロジェクトを検索",
+      close: "検索を閉じる",
+      closeAccessibility: "プロジェクト検索を閉じる",
     },
     sections: {
       sessions: "履歴",
+      workspaces: "ワークスペース",
     },
     worktreeSetup: {
       title: "ワークツリースクリプトを設定",

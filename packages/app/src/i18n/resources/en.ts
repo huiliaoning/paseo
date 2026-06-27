@@ -787,9 +787,20 @@ export const en = {
       home: "Home",
       settings: "Settings",
       closeSidebar: "Close sidebar",
+      commandCenter: "Command center",
+      openCommandCenter: "Open command center",
+      displayPreferences: "Display preferences",
+    },
+    search: {
+      placeholder: "Filter projects...",
+      clear: "Clear search",
+      open: "Search projects",
+      close: "Close search",
+      closeAccessibility: "Close project search",
     },
     sections: {
       sessions: "History",
+      workspaces: "Workspaces",
     },
     worktreeSetup: {
       title: "Set up worktree scripts",

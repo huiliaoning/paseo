@@ -807,9 +807,20 @@ export const es: TranslationResources = {
       home: "Hogar",
       settings: "Ajustes",
       closeSidebar: "Cerrar barra lateral",
+      commandCenter: "Centro de comando",
+      openCommandCenter: "Abrir centro de comando",
+      displayPreferences: "Preferencias de visualización",
+    },
+    search: {
+      placeholder: "Filtrar proyectos...",
+      clear: "Borrar búsqueda",
+      open: "Buscar proyectos",
+      close: "Cerrar búsqueda",
+      closeAccessibility: "Cerrar búsqueda de proyectos",
     },
     sections: {
       sessions: "Historial",
+      workspaces: "Espacios de trabajo",
     },
     worktreeSetup: {
       title: "Configurar secuencias de comandos del árbol de trabajo",

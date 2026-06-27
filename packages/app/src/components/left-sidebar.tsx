@@ -926,6 +926,7 @@ function DesktopSidebar({
 }
 
 function WorkspacesSectionHeader() {
+  const { t } = useTranslation();
   const { theme } = useUnistyles();
   const commandCenterKeys = useShortcutKeys("toggle-command-center");
   const setCommandCenterOpen = useKeyboardShortcutsStore((state) => state.setCommandCenterOpen);
@@ -949,8 +950,9 @@ function WorkspacesSectionHeader() {
         searchInputRef.current?.focus();
       });
     }
-    // Closing keeps the query: searchQuery is persisted in sidebar-view-store so
-    // the filter survives toggling the field shut and reopening it (or a restart).
+    // Closing keeps the query: searchQuery lives in sidebar-view-store and is
+    // included in its partialize, so the filter survives toggling the field shut
+    // and reopening it, and across app restarts.
   }, [isSearchActive]);
 
   const handleClearSearch = useCallback(() => {
@@ -985,7 +987,7 @@ function WorkspacesSectionHeader() {
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
-            placeholder="Filter projects..."
+            placeholder={t("sidebar.search.placeholder")}
             placeholderTextColor={theme.colors.foregroundMuted}
             value={searchQuery}
             onChangeText={handleSearchChange}
@@ -997,7 +999,7 @@ function WorkspacesSectionHeader() {
           {searchQuery.length > 0 && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Clear search"
+              accessibilityLabel={t("sidebar.search.clear")}
               onPress={handleClearSearch}
               style={styles.searchClearButton}
             >
@@ -1006,14 +1008,14 @@ function WorkspacesSectionHeader() {
           )}
         </View>
       ) : (
-        <Text style={styles.workspacesSectionTitle}>Workspaces</Text>
+        <Text style={styles.workspacesSectionTitle}>{t("sidebar.sections.workspaces")}</Text>
       )}
       <View style={styles.workspacesSectionActions}>
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open command center"
+              accessibilityLabel={t("sidebar.actions.openCommandCenter")}
               testID="sidebar-command-center-open"
               style={styles.workspacesHeaderIconButton}
               onPress={handleOpenCommandCenter}
@@ -1029,14 +1031,19 @@ function WorkspacesSectionHeader() {
             </Pressable>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center" offset={8}>
-            <HeaderIconTooltipContent label="Command center" shortcutKeys={commandCenterKeys} />
+            <HeaderIconTooltipContent
+              label={t("sidebar.actions.commandCenter")}
+              shortcutKeys={commandCenterKeys}
+            />
           </TooltipContent>
         </Tooltip>
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={isSearchActive ? "Close project search" : "Search projects"}
+              accessibilityLabel={
+                isSearchActive ? t("sidebar.search.closeAccessibility") : t("sidebar.search.open")
+              }
               testID="sidebar-project-search-toggle"
               style={searchButtonStyle}
               onPress={handleSearchPress}
@@ -1052,7 +1059,9 @@ function WorkspacesSectionHeader() {
             </Pressable>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center" offset={8}>
-            <HeaderIconTooltipContent label={isSearchActive ? "Close search" : "Search projects"} />
+            <HeaderIconTooltipContent
+              label={isSearchActive ? t("sidebar.search.close") : t("sidebar.search.open")}
+            />
           </TooltipContent>
         </Tooltip>
         <Tooltip delayDuration={300}>
@@ -1062,7 +1071,7 @@ function WorkspacesSectionHeader() {
             </View>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="center" offset={8}>
-            <HeaderIconTooltipContent label="Display preferences" />
+            <HeaderIconTooltipContent label={t("sidebar.actions.displayPreferences")} />
           </TooltipContent>
         </Tooltip>
       </View>

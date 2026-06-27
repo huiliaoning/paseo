@@ -806,9 +806,20 @@ export const fr: TranslationResources = {
       home: "Maison",
       settings: "Paramètres",
       closeSidebar: "Fermer la barre latérale",
+      commandCenter: "Centre de commande",
+      openCommandCenter: "Ouvrir le centre de commande",
+      displayPreferences: "Préférences d'affichage",
+    },
+    search: {
+      placeholder: "Filtrer les projets...",
+      clear: "Effacer la recherche",
+      open: "Rechercher des projets",
+      close: "Fermer la recherche",
+      closeAccessibility: "Fermer la recherche de projets",
     },
     sections: {
       sessions: "Historique",
+      workspaces: "Espaces de travail",
     },
     worktreeSetup: {
       title: "Configurer les scripts d'arbre de travail",

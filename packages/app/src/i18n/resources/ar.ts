@@ -780,9 +780,20 @@ export const ar: TranslationResources = {
       home: "بيت",
       settings: "إعدادات",
       closeSidebar: "إغلاق الشريط الجانبي",
+      commandCenter: "مركز القيادة",
+      openCommandCenter: "فتح مركز القيادة",
+      displayPreferences: "تفضيلات العرض",
+    },
+    search: {
+      placeholder: "تصفية المشاريع...",
+      clear: "مسح البحث",
+      open: "البحث في المشاريع",
+      close: "إغلاق البحث",
+      closeAccessibility: "إغلاق بحث المشاريع",
     },
     sections: {
       sessions: "السجل",
+      workspaces: "مساحات العمل",
     },
     worktreeSetup: {
       title: "إعداد البرامج النصية لشجرة العمل",

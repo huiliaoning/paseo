@@ -774,9 +774,20 @@ export const zhCN: TranslationResources = {
       home: "首页",
       settings: "设置",
       closeSidebar: "关闭侧边栏",
+      commandCenter: "命令中心",
+      openCommandCenter: "打开命令中心",
+      displayPreferences: "显示偏好",
+    },
+    search: {
+      placeholder: "筛选项目...",
+      clear: "清除搜索",
+      open: "搜索项目",
+      close: "关闭搜索",
+      closeAccessibility: "关闭项目搜索",
     },
     sections: {
       sessions: "历史",
+      workspaces: "工作区",
     },
     worktreeSetup: {
       title: "设置 worktree scripts",

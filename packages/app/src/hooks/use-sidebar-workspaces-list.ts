@@ -180,24 +180,20 @@ export function useSidebarWorkspacesList(options?: {
   );
 
   const rawProjects = sidebarModel.projects.length > 0 ? sidebarModel.projects : EMPTY_PROJECTS;
-  const filteredProjects = useMemo(
+  const projects = useMemo(
     () => filterBySearchQuery(rawProjects, searchQuery),
     [rawProjects, searchQuery],
   );
-  const projects = filteredProjects;
   const workspacePlacements = useMemo(
-    () =>
-      filteredProjects.length > 0
-        ? filteredProjects.flatMap((p) => p.workspaces)
-        : EMPTY_WORKSPACES,
-    [filteredProjects],
+    () => (projects.length > 0 ? projects.flatMap((p) => p.workspaces) : EMPTY_WORKSPACES),
+    [projects],
   );
   const projectNamesByKey = useMemo(
     () =>
-      filteredProjects.length > 0
-        ? new Map(filteredProjects.map((p) => [p.projectKey, p.projectName]))
+      projects.length > 0
+        ? new Map(projects.map((p) => [p.projectKey, p.projectName]))
         : EMPTY_PROJECT_NAMES,
-    [filteredProjects],
+    [projects],
   );
 
   useEffect(() => {

@@ -21,6 +21,7 @@ interface SidebarViewStoreState {
 interface SidebarViewPersistedState {
   groupMode: SidebarGroupMode;
   hostFilter: string | null;
+  searchQuery: string;
 }
 
 function isSidebarGroupMode(value: unknown): value is SidebarGroupMode {
@@ -44,17 +45,21 @@ function readLegacyGroupMode(persistedState: Record<string, unknown>): SidebarGr
 
 export function migrateSidebarViewState(persistedState: unknown): SidebarViewPersistedState {
   if (!isRecord(persistedState)) {
-    return { groupMode: "project", hostFilter: null };
+    return { groupMode: "project", hostFilter: null, searchQuery: "" };
   }
+
+  const searchQuery =
+    typeof persistedState.searchQuery === "string" ? persistedState.searchQuery : "";
 
   const legacyGroupMode = readLegacyGroupMode(persistedState);
   if (legacyGroupMode) {
-    return { groupMode: legacyGroupMode, hostFilter: null };
+    return { groupMode: legacyGroupMode, hostFilter: null, searchQuery };
   }
 
   return {
     groupMode: isSidebarGroupMode(persistedState.groupMode) ? persistedState.groupMode : "project",
     hostFilter: typeof persistedState.hostFilter === "string" ? persistedState.hostFilter : null,
+    searchQuery,
   };
 }
 
@@ -98,6 +103,7 @@ export const useSidebarViewStore = create<SidebarViewStoreState>()(
       partialize: (state) => ({
         groupMode: state.groupMode,
         hostFilter: state.hostFilter,
+        searchQuery: state.searchQuery,
       }),
       migrate: migrateSidebarViewState,
     },
