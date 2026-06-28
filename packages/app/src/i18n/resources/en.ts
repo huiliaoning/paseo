@@ -1090,6 +1090,7 @@ export const en = {
   projectPicker: {
     placeholder: "Type a directory path...",
     opening: "Opening project...",
+    searching: "Searching...",
     empty: "Start typing a path",
     errors: {
       directory_not_found: "Directory not found.",

@@ -1107,6 +1107,7 @@ export const ru: TranslationResources = {
   projectPicker: {
     placeholder: "Введите путь к каталогу...",
     opening: "Открытие проекта...",
+    searching: "Идет поиск...",
     empty: "Начните вводить путь",
     errors: {
       directory_not_found: "Каталог не найден.",
