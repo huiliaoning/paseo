@@ -20,6 +20,8 @@ import { isElectronRuntime } from "@/desktop/host";
 import type { HostProfile } from "@/types/host-connection";
 import { settingsStyles } from "@/styles/settings";
 import { confirmDialog } from "@/utils/confirm-dialog";
+import { useToast } from "@/contexts/toast-context";
+import { toErrorMessage } from "@/utils/error-messages";
 import { ICON_SIZE } from "@/styles/theme";
 import type { Theme } from "@/styles/theme";
 
@@ -407,6 +409,7 @@ function ScheduleRow({
   onDelete,
 }: ScheduleRowProps) {
   const { t } = useTranslation();
+  const toast = useToast();
   const [isBusy, setIsBusy] = useState(false);
 
   const isCompleted = schedule.status === "completed";
@@ -417,21 +420,35 @@ function ScheduleRow({
   const nextRunText = isActive ? formatTimestamp(schedule.nextRunAt) : null;
   const statusLabel = resolveScheduleStatusLabel(schedule.status, t);
 
+  // Run a row mutation and surface any daemon error as a toast — the mutations
+  // throw on failure but have no onError, so the call site is the only place
+  // the user can be told the action didn't take effect.
+  const runRowAction = useCallback(
+    async (action: Promise<void>) => {
+      setIsBusy(true);
+      try {
+        await action;
+      } catch (error) {
+        toast.error(toErrorMessage(error));
+      } finally {
+        setIsBusy(false);
+      }
+    },
+    [toast],
+  );
+
   const handleToggle = useCallback(
     (next: boolean) => {
       if (isBusy || isCompleted) return;
-      setIsBusy(true);
-      const action = next ? onResume(schedule.id) : onPause(schedule.id);
-      void action.finally(() => setIsBusy(false));
+      void runRowAction(next ? onResume(schedule.id) : onPause(schedule.id));
     },
-    [isBusy, isCompleted, onPause, onResume, schedule.id],
+    [isBusy, isCompleted, onPause, onResume, runRowAction, schedule.id],
   );
 
   const handleRunOnce = useCallback(() => {
     if (isBusy) return;
-    setIsBusy(true);
-    void onRunOnce(schedule.id).finally(() => setIsBusy(false));
-  }, [isBusy, onRunOnce, schedule.id]);
+    void runRowAction(onRunOnce(schedule.id));
+  }, [isBusy, onRunOnce, runRowAction, schedule.id]);
 
   const handleEdit = useCallback(() => onEdit(schedule), [onEdit, schedule]);
   const handleViewRuns = useCallback(() => onViewRuns(schedule.id), [onViewRuns, schedule.id]);
@@ -447,11 +464,10 @@ function ScheduleRow({
       if (!confirmed) {
         return;
       }
-      setIsBusy(true);
-      void onDelete(schedule.id).finally(() => setIsBusy(false));
+      void runRowAction(onDelete(schedule.id));
       return;
     });
-  }, [onDelete, schedule.id, t, title]);
+  }, [onDelete, runRowAction, schedule.id, t, title]);
 
   const rowStyle = useMemo(
     () => [settingsStyles.row, !isFirst && settingsStyles.rowBorder, styles.row],
