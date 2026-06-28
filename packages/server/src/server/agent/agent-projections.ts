@@ -94,6 +94,7 @@ export function toStoredAgentRecord(
       : null,
     internal: options?.internal,
     taskProgress: agent.taskProgress,
+    ...(agent.taskDeltaEntries ? { taskDeltaEntries: agent.taskDeltaEntries } : {}),
   } satisfies StoredAgentRecord;
 }
 

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTaskProgress, extractTaskEntriesFromToolCall } from "./task-progress.js";
+import {
+  applyTaskDelta,
+  buildTaskProgress,
+  extractTaskDeltaFromToolCall,
+  extractTaskEntriesFromToolCall,
+  taskEntriesToProgress,
+  type TaskEntryWithId,
+} from "./task-progress.js";
 
 describe("extractTaskEntriesFromToolCall", () => {
   it("extracts TodoWrite entries with three-way status", () => {
@@ -44,6 +51,105 @@ describe("extractTaskEntriesFromToolCall", () => {
     });
 
     expect(tasks?.map((task) => task.text)).toEqual(["Investigate", "Implement"]);
+  });
+});
+
+describe("extractTaskDeltaFromToolCall", () => {
+  it("parses TaskCreate into a create delta (pending)", () => {
+    const delta = extractTaskDeltaFromToolCall("TaskCreate", {
+      subject: "Build the CLI",
+      description: "long form",
+    });
+    expect(delta).toEqual({ kind: "create", text: "Build the CLI", status: "pending" });
+  });
+
+  it("prefers activeForm over subject for create text", () => {
+    const delta = extractTaskDeltaFromToolCall("TaskCreate", {
+      subject: "Build the CLI",
+      activeForm: "Building the CLI",
+    });
+    expect(delta).toMatchObject({ kind: "create", text: "Building the CLI" });
+  });
+
+  it("parses TaskUpdate status changes", () => {
+    expect(
+      extractTaskDeltaFromToolCall("TaskUpdate", { taskId: 2, status: "in_progress" }),
+    ).toEqual({ kind: "update", id: "2", status: "in_progress" });
+  });
+
+  it("maps TaskUpdate deleted status to a delete delta", () => {
+    expect(extractTaskDeltaFromToolCall("TaskUpdate", { taskId: "3", status: "deleted" })).toEqual({
+      kind: "delete",
+      id: "3",
+    });
+  });
+
+  it("normalizes separator variants of the task tool names", () => {
+    for (const name of ["TaskCreate", "taskcreate", "task_create", "task.create", "Task Create"]) {
+      expect(extractTaskDeltaFromToolCall(name, { subject: "x" })).toMatchObject({
+        kind: "create",
+      });
+    }
+  });
+
+  it("returns null for unrelated tools", () => {
+    expect(extractTaskDeltaFromToolCall("Bash", { command: "ls" })).toBeNull();
+    expect(extractTaskDeltaFromToolCall("TodoWrite", { todos: [] })).toBeNull();
+  });
+});
+
+describe("applyTaskDelta", () => {
+  it("appends on create, assigning a positional logical id", () => {
+    const after = applyTaskDelta([], { kind: "create", text: "a", status: "pending" }, "call-1");
+    expect(after).toEqual([{ id: "1", callId: "call-1", text: "a", status: "pending" }]);
+  });
+
+  it("dedupes a create recorded twice under the same callId", () => {
+    let entries = applyTaskDelta([], { kind: "create", text: "a", status: "pending" }, "call-1");
+    // Same call recorded again (running → completed) with fuller text.
+    entries = applyTaskDelta(
+      entries,
+      { kind: "create", text: "Task A", status: "pending" },
+      "call-1",
+    );
+    expect(entries).toEqual([{ id: "1", callId: "call-1", text: "Task A", status: "pending" }]);
+  });
+
+  it("mutates status of the matching logical id on update", () => {
+    const start: TaskEntryWithId[] = [{ id: "1", callId: "c1", text: "a", status: "pending" }];
+    expect(applyTaskDelta(start, { kind: "update", id: "1", status: "completed" })).toEqual([
+      { id: "1", callId: "c1", text: "a", status: "completed" },
+    ]);
+  });
+
+  it("drops the matching logical id on delete", () => {
+    const start: TaskEntryWithId[] = [
+      { id: "1", text: "a", status: "pending" },
+      { id: "2", text: "b", status: "pending" },
+    ];
+    expect(applyTaskDelta(start, { kind: "delete", id: "1" })).toEqual([
+      { id: "2", text: "b", status: "pending" },
+    ]);
+  });
+
+  it("is a no-op when updating an unknown id", () => {
+    const start: TaskEntryWithId[] = [{ id: "1", text: "a", status: "pending" }];
+    expect(applyTaskDelta(start, { kind: "update", id: "99", status: "completed" })).toBe(start);
+  });
+
+  it("accumulates a create/update sequence into the expected counts", () => {
+    let entries: TaskEntryWithId[] = [];
+    ["a", "b", "c"].forEach((text, index) => {
+      entries = applyTaskDelta(
+        entries,
+        { kind: "create", text, status: "pending" },
+        `call-${index}`,
+      );
+    });
+    entries = applyTaskDelta(entries, { kind: "update", id: "1", status: "in_progress" });
+    entries = applyTaskDelta(entries, { kind: "update", id: "1", status: "completed" });
+    const progress = taskEntriesToProgress(entries, "2026-06-28T00:00:00.000Z");
+    expect(progress).toMatchObject({ pending: 2, inProgress: 0, completed: 1, total: 3 });
   });
 });
 

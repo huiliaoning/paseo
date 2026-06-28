@@ -439,6 +439,25 @@ describe("taskProgress projection", () => {
     const payload = buildStoredAgentPayload(record, ["claude"]);
     expect(payload.taskProgress).toEqual(progress);
   });
+
+  it("round-trips the incremental task-delta accumulator on the stored record", () => {
+    const agent = createManagedAgent({
+      taskDeltaEntries: [
+        { id: "1", callId: "c1", text: "a", status: "completed" },
+        { id: "2", callId: "c2", text: "b", status: "pending" },
+      ],
+    });
+    const record = toStoredAgentRecord(agent);
+    expect(record.taskDeltaEntries).toEqual([
+      { id: "1", callId: "c1", text: "a", status: "completed" },
+      { id: "2", callId: "c2", text: "b", status: "pending" },
+    ]);
+  });
+
+  it("omits the accumulator fields when absent", () => {
+    const record = toStoredAgentRecord(createManagedAgent());
+    expect(record.taskDeltaEntries).toBeUndefined();
+  });
 });
 
 describe("toRecentProviderSessionDescriptorPayload", () => {

@@ -45,8 +45,12 @@ import {
 import { buildArchivedAgentRecord, type ArchivedStoredAgentRecord } from "./agent-archive.js";
 import type { TaskProgressPayload } from "../messages.js";
 import {
+  applyTaskDelta,
   buildTaskProgress,
+  extractTaskDeltaFromToolCall,
   extractTaskEntriesFromToolCall,
+  taskEntriesToProgress,
+  type TaskEntryWithId,
 } from "@getpaseo/protocol/task-progress";
 import type { StoredAgentRecord, AgentStorage } from "./agent-storage.js";
 import {
@@ -348,6 +352,12 @@ interface ManagedAgentBase {
    * every client can render task progress without loading the agent's stream.
    */
   taskProgress?: TaskProgressPayload;
+  /**
+   * Running list accumulated from incremental task tools (Claude Code
+   * TaskCreate/TaskUpdate). Full-list tools (TodoWrite/UpdatePlan) clear this.
+   * Persisted so deltas survive a daemon restart.
+   */
+  taskDeltaEntries?: TaskEntryWithId[];
   attention: AttentionState;
   foregroundTurnWaiters: Set<ForegroundTurnWaiter>;
   finalizedForegroundTurnIds: Set<string>;
@@ -3043,10 +3053,6 @@ export class AgentManager {
       this.dispatchStream(agent.id, event, { timestamp: new Date().toISOString() });
     }
 
-    if (!options?.fromHistory && event.type === "timeline") {
-      void this.maybeUpdateTaskProgress(agent, event.item);
-    }
-
     this.traceHandleStreamEventEnd(agent, event, eventTurnId, flags);
 
     return flags.shouldNotifyWaiters;
@@ -3065,7 +3071,7 @@ export class AgentManager {
     if (agent.internal) {
       return;
     }
-    const next = deriveTaskProgressFromTimelineItem(item);
+    const next = this.deriveNextTaskProgress(agent, item);
     if (!next) {
       return;
     }
@@ -3079,6 +3085,50 @@ export class AgentManager {
       this.logger.warn({ agentId: agent.id, error }, "agent.manager.task_progress.persist_failed");
     }
     this.emitState(agent, { persist: false });
+  }
+
+  /**
+   * Compute the next task-progress snapshot for a timeline item. Incremental
+   * tools (Claude Code TaskCreate/TaskUpdate) accumulate into a per-agent list;
+   * full-list tools (TodoWrite/UpdatePlan/OpenCode todos) replace it and clear
+   * the incremental accumulator so the two semantics never double-count.
+   */
+  private deriveNextTaskProgress(
+    agent: ManagedAgent,
+    item: AgentTimelineItem,
+  ): TaskProgressPayload | null {
+    if (item.type === "tool_call" && item.detail.type === "unknown") {
+      const delta = extractTaskDeltaFromToolCall(item.name, item.detail.input);
+      if (delta) {
+        // callId dedupes a create recorded multiple times (running → completed).
+        const current: TaskEntryWithId[] = agent.taskDeltaEntries ?? [];
+        agent.taskDeltaEntries = applyTaskDelta(current, delta, item.callId);
+        return taskEntriesToProgress(agent.taskDeltaEntries, new Date().toISOString());
+      }
+    }
+    const fullList = deriveTaskProgressFromTimelineItem(item);
+    if (fullList) {
+      // A full-list snapshot supersedes any incremental accumulation.
+      agent.taskDeltaEntries = undefined;
+    }
+    return fullList;
+  }
+
+  /**
+   * Seed task state onto a freshly loaded agent from its stored record so
+   * progress (and the incremental accumulator) survive a daemon restart.
+   */
+  restoreTaskState(agentId: string, record: StoredAgentRecord): void {
+    const agent = this.agents.get(agentId);
+    if (!agent) {
+      return;
+    }
+    if (record.taskProgress) {
+      agent.taskProgress = record.taskProgress;
+    }
+    if (record.taskDeltaEntries) {
+      agent.taskDeltaEntries = record.taskDeltaEntries;
+    }
   }
 
   private traceHandleStreamEventStart(
@@ -3531,6 +3581,14 @@ export class AgentManager {
   ): AgentTimelineRow {
     const row = this.timelineStore.append(agentId, item, options);
     this.enqueueDurableTimelineAppend(agentId, row);
+    // recordTimeline is the single funnel for every timeline write — provider
+    // stream events AND MCP tool results (Claude Code TaskCreate/TaskUpdate
+    // arrive via the latter, bypassing handleStreamEvent). Derive task progress
+    // here so both paths are covered.
+    const agent = this.agents.get(agentId);
+    if (agent) {
+      void this.maybeUpdateTaskProgress(agent, item);
+    }
     return row;
   }
 
