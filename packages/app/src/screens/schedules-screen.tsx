@@ -414,6 +414,11 @@ function ScheduleRow({
 
   const isCompleted = schedule.status === "completed";
   const isActive = schedule.status === "active";
+  // The edit modal can only represent "new-agent" targets; saving it always
+  // writes a newAgentConfig block. Offering Edit on an "agent" target (only
+  // creatable via CLI/MCP) would open a blank form and silently convert the
+  // target type on save, so hide Edit for anything the modal can't round-trip.
+  const isEditable = schedule.target.type === "new-agent";
   const title =
     schedule.name?.trim() || schedule.prompt.trim() || t("settings.host.schedules.untitled");
   const cadenceSummary = formatCadenceSummary(schedule.cadence);
@@ -510,15 +515,17 @@ function ScheduleRow({
           accessibilityLabel={t("settings.host.schedules.viewRuns")}
           testID={`schedule-view-runs-${schedule.id}`}
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          leftIcon={editIcon}
-          onPress={handleEdit}
-          disabled={isBusy}
-          accessibilityLabel={t("settings.host.schedules.edit")}
-          testID={`schedule-edit-${schedule.id}`}
-        />
+        {isEditable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={editIcon}
+            onPress={handleEdit}
+            disabled={isBusy}
+            accessibilityLabel={t("settings.host.schedules.edit")}
+            testID={`schedule-edit-${schedule.id}`}
+          />
+        ) : null}
         <Button
           variant="ghost"
           size="sm"
