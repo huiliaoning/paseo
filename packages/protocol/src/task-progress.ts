@@ -217,6 +217,18 @@ export function extractTaskDeltaFromToolCall(toolName: string, input: unknown): 
  * - update: mutate text/status of the matching logical id; no-op if unknown.
  * - delete: drop the matching logical id.
  */
+/** Next monotonic logical id: one past the highest numeric id in use. */
+function nextTaskId(entries: TaskEntryWithId[]): number {
+  let max = 0;
+  for (const entry of entries) {
+    const parsed = Number(entry.id);
+    if (Number.isInteger(parsed) && parsed > max) {
+      max = parsed;
+    }
+  }
+  return max + 1;
+}
+
 export function applyTaskDelta(
   entries: TaskEntryWithId[],
   delta: TaskDelta,
@@ -237,7 +249,11 @@ export function applyTaskDelta(
         return next;
       }
     }
-    const id = String(entries.length + 1);
+    // Derive the next id from the max existing numeric id, never the list
+    // length: after a delete the length shrinks and a length-based id would
+    // collide with a surviving entry (delete "1" from ["1","2"] then create →
+    // length 1 → "2", colliding with the survivor). Max-based ids stay unique.
+    const id = String(nextTaskId(entries));
     const created: TaskEntryWithId = {
       id,
       ...(callId !== undefined ? { callId } : {}),

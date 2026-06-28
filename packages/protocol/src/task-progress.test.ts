@@ -132,6 +132,15 @@ describe("applyTaskDelta", () => {
     ]);
   });
 
+  it("assigns a non-colliding id after a deletion shrinks the list", () => {
+    // Regression: create 1, 2 → delete 1 → create → must NOT reuse "2".
+    let entries = applyTaskDelta([], { kind: "create", text: "a", status: "pending" }, "c1");
+    entries = applyTaskDelta(entries, { kind: "create", text: "b", status: "pending" }, "c2");
+    entries = applyTaskDelta(entries, { kind: "delete", id: "1" });
+    entries = applyTaskDelta(entries, { kind: "create", text: "c", status: "pending" }, "c3");
+    expect(entries.map((entry) => entry.id)).toEqual(["2", "3"]);
+  });
+
   it("is a no-op when updating an unknown id", () => {
     const start: TaskEntryWithId[] = [{ id: "1", text: "a", status: "pending" }];
     expect(applyTaskDelta(start, { kind: "update", id: "99", status: "completed" })).toBe(start);
