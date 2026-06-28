@@ -43,6 +43,11 @@ import {
   type ListImportableSessionsOptions,
 } from "./agent-sdk-types.js";
 import { buildArchivedAgentRecord, type ArchivedStoredAgentRecord } from "./agent-archive.js";
+import type { TaskProgressPayload } from "../messages.js";
+import {
+  buildTaskProgress,
+  extractTaskEntriesFromToolCall,
+} from "@getpaseo/protocol/task-progress";
 import type { StoredAgentRecord, AgentStorage } from "./agent-storage.js";
 import {
   InMemoryAgentTimelineStore,
@@ -147,6 +152,55 @@ export type AgentManagerEvent =
     };
 
 export type AgentSubscriber = (event: AgentManagerEvent) => void;
+
+/**
+ * Derive a TaskProgress snapshot from a timeline item, or null when the item is
+ * not a task list. Handles Claude's TodoWrite (raw input on the tool_call
+ * detail) and OpenCode's `todo` item (already collapsed to completed booleans,
+ * so in_progress cannot be distinguished for OpenCode).
+ */
+function deriveTaskProgressFromTimelineItem(item: AgentTimelineItem): TaskProgressPayload | null {
+  const updatedAt = new Date().toISOString();
+  if (item.type === "tool_call" && item.detail.type === "unknown") {
+    const entries = extractTaskEntriesFromToolCall(item.name, item.detail.input);
+    if (!entries) {
+      return null;
+    }
+    return buildTaskProgress(entries, updatedAt);
+  }
+  if (item.type === "todo") {
+    const entries = item.items.map((todo) => ({
+      text: todo.text,
+      status: (todo.completed
+        ? "completed"
+        : "pending") as TaskProgressPayload["items"][number]["status"],
+      completed: todo.completed,
+    }));
+    return buildTaskProgress(entries, updatedAt);
+  }
+  return null;
+}
+
+function taskProgressEqual(a: TaskProgressPayload | undefined, b: TaskProgressPayload): boolean {
+  if (!a) {
+    return false;
+  }
+  if (
+    a.pending !== b.pending ||
+    a.inProgress !== b.inProgress ||
+    a.completed !== b.completed ||
+    a.total !== b.total ||
+    a.items.length !== b.items.length
+  ) {
+    return false;
+  }
+  for (let i = 0; i < a.items.length; i += 1) {
+    if (a.items[i].text !== b.items[i].text || a.items[i].status !== b.items[i].status) {
+      return false;
+    }
+  }
+  return true;
+}
 
 export interface SubscribeOptions {
   agentId?: string;
@@ -288,6 +342,12 @@ interface ManagedAgentBase {
   lastUserMessageAt: Date | null;
   lastUsage?: AgentUsage;
   lastError?: string;
+  /**
+   * Latest task-list snapshot (Claude TodoWrite / OpenCode todos / Codex
+   * UpdatePlan) with three-way status counts. Persisted on the agent record so
+   * every client can render task progress without loading the agent's stream.
+   */
+  taskProgress?: TaskProgressPayload;
   attention: AttentionState;
   foregroundTurnWaiters: Set<ForegroundTurnWaiter>;
   finalizedForegroundTurnIds: Set<string>;
@@ -2983,9 +3043,42 @@ export class AgentManager {
       this.dispatchStream(agent.id, event, { timestamp: new Date().toISOString() });
     }
 
+    if (!options?.fromHistory && event.type === "timeline") {
+      void this.maybeUpdateTaskProgress(agent, event.item);
+    }
+
     this.traceHandleStreamEventEnd(agent, event, eventTurnId, flags);
 
     return flags.shouldNotifyWaiters;
+  }
+
+  /**
+   * Persist + broadcast an updated task-progress snapshot when a timeline item
+   * carries a task list. A TodoWrite tool call (Claude) or a `todo` item
+   * (OpenCode) does not constitute a lifecycle change on its own, so we must
+   * emit an explicit agent-state update for clients to see live progress.
+   */
+  private async maybeUpdateTaskProgress(
+    agent: ManagedAgent,
+    item: AgentTimelineItem,
+  ): Promise<void> {
+    if (agent.internal) {
+      return;
+    }
+    const next = deriveTaskProgressFromTimelineItem(item);
+    if (!next) {
+      return;
+    }
+    if (taskProgressEqual(agent.taskProgress, next)) {
+      return;
+    }
+    agent.taskProgress = next;
+    try {
+      await this.persistSnapshot(agent);
+    } catch (error) {
+      this.logger.warn({ agentId: agent.id, error }, "agent.manager.task_progress.persist_failed");
+    }
+    this.emitState(agent, { persist: false });
   }
 
   private traceHandleStreamEventStart(

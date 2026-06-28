@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { AGENT_LIFECYCLE_STATUSES } from "./agent-manager.js";
 import {
+  buildStoredAgentPayload,
   toAgentPayload,
   toRecentProviderSessionDescriptorPayload,
   toStoredAgentRecord,
   type ManagedAgent,
 } from "./agent-projections.js";
+import type { TaskProgressPayload } from "../messages.js";
 import type { AgentSession } from "./agent-sdk-types.js";
 import type {
   AgentFeature,
@@ -396,6 +398,46 @@ describe("toAgentPayload", () => {
     const payload = toAgentPayload(agent);
 
     expect(payload.features).toEqual(features);
+  });
+});
+
+describe("taskProgress projection", () => {
+  const progress: TaskProgressPayload = {
+    items: [
+      { text: "Investigate", status: "completed" },
+      { text: "Implement", status: "in_progress" },
+      { text: "Test", status: "pending" },
+    ],
+    pending: 1,
+    inProgress: 1,
+    completed: 1,
+    total: 3,
+    updatedAt: "2026-06-28T00:00:00.000Z",
+  };
+
+  it("persists taskProgress on the stored record", () => {
+    const agent = createManagedAgent({ taskProgress: progress });
+    const record = toStoredAgentRecord(agent);
+    expect(record.taskProgress).toEqual(progress);
+  });
+
+  it("includes taskProgress in the live snapshot payload", () => {
+    const agent = createManagedAgent({ taskProgress: progress });
+    const payload = toAgentPayload(agent);
+    expect(payload.taskProgress).toEqual(progress);
+  });
+
+  it("omits taskProgress when absent", () => {
+    const agent = createManagedAgent();
+    expect(toAgentPayload(agent)).not.toHaveProperty("taskProgress");
+    expect(toStoredAgentRecord(agent).taskProgress).toBeUndefined();
+  });
+
+  it("restores taskProgress from the stored record snapshot", () => {
+    const agent = createManagedAgent({ taskProgress: progress });
+    const record = toStoredAgentRecord(agent);
+    const payload = buildStoredAgentPayload(record, ["claude"]);
+    expect(payload.taskProgress).toEqual(progress);
   });
 });
 

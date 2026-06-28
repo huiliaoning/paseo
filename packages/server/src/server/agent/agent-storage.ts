@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Logger } from "pino";
 
 import { writeJsonFileAtomic } from "../atomic-file.js";
-import { AgentFeatureSchema, AgentStatusSchema } from "../messages.js";
+import { AgentFeatureSchema, AgentStatusSchema, TaskProgressPayloadSchema } from "../messages.js";
 import { toStoredAgentRecord } from "./agent-projections.js";
 import type { ManagedAgent } from "./agent-manager.js";
 import type { AgentSessionConfig } from "./agent-sdk-types.js";
@@ -64,6 +64,8 @@ const STORED_AGENT_SCHEMA = z.object({
   attentionTimestamp: z.string().nullable().optional(),
   internal: z.boolean().optional(),
   archivedAt: z.string().nullable().optional(),
+  // COMPAT(taskProgress): added in v0.1.X. Old records read back undefined (optional).
+  taskProgress: TaskProgressPayloadSchema.optional(),
 });
 
 export type SerializableAgentConfig = Pick<

@@ -93,6 +93,7 @@ export function toStoredAgentRecord(
       ? agent.attention.attentionTimestamp.toISOString()
       : null,
     internal: options?.internal,
+    taskProgress: agent.taskProgress,
   } satisfies StoredAgentRecord;
 }
 
@@ -147,6 +148,10 @@ export function toAgentPayload(
   } else {
     payload.attentionReason = null;
     payload.attentionTimestamp = null;
+  }
+
+  if (agent.taskProgress) {
+    payload.taskProgress = agent.taskProgress;
   }
 
   return payload;
@@ -236,6 +241,7 @@ export function buildStoredAgentPayload(
     archivedAt: record.archivedAt ?? null,
     labels: normalizeLabels(record.labels),
     ...(providerAvailable ? {} : { providerUnavailable: true }),
+    ...(record.taskProgress ? { taskProgress: record.taskProgress } : {}),
   };
 }
 
